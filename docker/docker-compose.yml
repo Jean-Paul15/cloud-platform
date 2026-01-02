@@ -1,0 +1,179 @@
+version: '3.8'
+
+services:
+  # ===== ZONE PUBLIQUE =====
+  gateway:
+    image: nginx:alpine
+    container_name: dbaas-gateway
+    ports:
+      - "${GATEWAY_PORT:-80}:80"
+      - "${GATEWAY_SSL_PORT:-443}:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - auth-service
+      - manager-service
+    networks:
+      - public-net
+      - private-net
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/health"]
+      interval: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ===== MICROSERVICES =====
+  auth-service:
+    build: ../src/services/auth
+    container_name: dbaas-auth
+    env_file:
+      - ../.env
+    depends_on:
+      - postgres-sys
+    networks:
+      - private-net
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 10s
+      retries: 3
+    restart: unless-stopped
+
+  manager-service:
+    build: ../src/services/manager
+    container_name: dbaas-manager
+    env_file:
+      - ../.env
+    depends_on:
+      - mongo-router
+    networks:
+      - private-net
+      - data-net
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ===== BDD SYSTÈME =====
+  postgres-sys:
+    image: postgres:13-alpine
+    container_name: dbaas-postgres-sys
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: dbaas_system
+      PGDATABASE: dbaas_system
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    networks:
+      - private-net
+    healthcheck:
+      test: ["CMD-SHELL", "psql -U admin -c 'SELECT 1' > /dev/null 2>&1"]
+      interval: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # ===== MONGODB CLUSTER =====
+  # Config Servers
+  mongo-config-1:
+    image: mongo:5.0
+    container_name: mongo-config-1
+    command: mongod --configsvr --replSet configRS --port 27019 --bind_ip_all
+    volumes:
+      - config1:/data/db
+    networks:
+      - data-net
+    restart: unless-stopped
+
+  mongo-config-2:
+    image: mongo:5.0
+    container_name: mongo-config-2
+    command: mongod --configsvr --replSet configRS --port 27019 --bind_ip_all
+    volumes:
+      - config2:/data/db
+    networks:
+      - data-net
+    restart: unless-stopped
+
+  mongo-config-3:
+    image: mongo:5.0
+    container_name: mongo-config-3
+    command: mongod --configsvr --replSet configRS --port 27019 --bind_ip_all
+    volumes:
+      - config3:/data/db
+    networks:
+      - data-net
+    restart: unless-stopped
+
+  # Shard 1
+  mongo-shard1-a:
+    image: mongo:5.0
+    container_name: mongo-shard1-a
+    command: mongod --shardsvr --replSet shard1RS --port 27018 --bind_ip_all
+    volumes:
+      - shard1a:/data/db
+    networks:
+      - data-net
+    restart: unless-stopped
+
+  mongo-shard1-b:
+    image: mongo:5.0
+    container_name: mongo-shard1-b
+    command: mongod --shardsvr --replSet shard1RS --port 27018 --bind_ip_all
+    volumes:
+      - shard1b:/data/db
+    networks:
+      - data-net
+    restart: unless-stopped
+
+  # Shard 2
+  mongo-shard2-a:
+    image: mongo:5.0
+    container_name: mongo-shard2-a
+    command: mongod --shardsvr --replSet shard2RS --port 27018 --bind_ip_all
+    volumes:
+      - shard2a:/data/db
+    networks:
+      - data-net
+    restart: unless-stopped
+
+  mongo-shard2-b:
+    image: mongo:5.0
+    container_name: mongo-shard2-b
+    command: mongod --shardsvr --replSet shard2RS --port 27018 --bind_ip_all
+    volumes:
+      - shard2b:/data/db
+    networks:
+      - data-net
+    restart: unless-stopped
+
+  # Mongos Router
+  mongo-router:
+    image: mongo:5.0
+    container_name: mongo-router
+    command: mongos --configdb configRS/mongo-config-1:27019,mongo-config-2:27019,mongo-config-3:27019 --bind_ip_all --port 27017
+    depends_on:
+      - mongo-config-1
+      - mongo-shard1-a
+      - mongo-shard2-a
+    networks:
+      - data-net
+    restart: unless-stopped
+
+networks:
+  public-net:
+  private-net:
+    internal: true
+  data-net:
+    internal: true
+
+volumes:
+  pg-data:
+  config1:
+  config2:
+  config3:
+  shard1a:
+  shard1b:
+  shard2a:
+  shard2b:

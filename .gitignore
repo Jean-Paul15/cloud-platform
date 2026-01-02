@@ -1,0 +1,74 @@
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+docker/ssl/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+coverage/
+.nyc_output/
+dist/
+build/
+*.tsbuildinfo
+
+# Prisma
+src/services/*/prisma/migrations/
+
+# Python / environnements
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Sauvegardes, sorties, logs, données
+backups/
+*.sql.gz
+*.tar.gz
+logs/
+*.log
+output/
+tmp/
+data/*
+!data/sample/
+*.bak
+*.backup
+
+# Archives et documents binaires
+*.zip
+*.rar
+*.7z
+*.pdf
+*.docx
+*.pptx
+
+# LaTeX
+*.aux
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Modèles binaires
+*.pkl
+*.h5
+*.onnx
+
+# Système et éditeurs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+.claude/
+NUL
+
+# Notes de travail
+.api-notes.md
