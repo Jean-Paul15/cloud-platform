@@ -1,0 +1,19 @@
+# Secrets sensibles
+.env
+
+# Dépendances
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# Tests
+coverage/
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/

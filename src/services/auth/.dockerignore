@@ -1,0 +1,23 @@
+# Secrets sensibles
+.env
+
+# Dépendances
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# Prisma
+prisma/migrations/
+!prisma/schema.prisma
+
+# Tests
+coverage/
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
